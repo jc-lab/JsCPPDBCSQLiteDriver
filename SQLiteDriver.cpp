@@ -71,15 +71,23 @@ namespace JsCPPDBC {
 
 		flag = true;
 		for (std::map<std::string, EntityColumn>::const_iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY)) {
+			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY) && iter->second.m_insertable) {
 				if (flag) {
 					flag = false;
 					sql.append("`");
-					sqlValuePart.append("?");
+					if (!iter->second.m_insertQuery.empty())
+						sqlValuePart.append(iter->second.m_insertQuery);
+					else
+						sqlValuePart.append("?");
+
 				}
 				else {
 					sql.append(", `");
-					sqlValuePart.append(", ?");
+					sqlValuePart.append(",");
+					if (!iter->second.m_insertQuery.empty())
+						sqlValuePart.append(iter->second.m_insertQuery);
+					else
+						sqlValuePart.append("?");
 				}
 				sql.append(iter->first);
 				sql.append("`");
@@ -102,16 +110,22 @@ namespace JsCPPDBC {
 
 		flag = true;
 		for (std::map<std::string, EntityColumn>::const_iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (!iter->second.isId) {
-				if (flag) {
-					flag = false;
+			if (iter->second.m_updatable) {
+				if (!iter->second.isId) {
+					if (flag) {
+						flag = false;
+					}
+					else {
+						sql.append(",");
+					}
+					sql.append("`");
+					sql.append(iter->first);
+					sql.append("`=");
+					if (!iter->second.m_updateQuery.empty())
+						sql.append(iter->second.m_updateQuery);
+					else
+						sql.append("?");
 				}
-				else {
-					sql.append(",");
-				}
-				sql.append("`");
-				sql.append(iter->first);
-				sql.append("`=?");
 			}
 		}
 
@@ -138,17 +152,26 @@ namespace JsCPPDBC {
 
 		flag = true;
 		for (std::map<std::string, EntityColumn>::const_iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (flag) {
-				flag = false;
+			if (iter->second.m_insertable) {
+				if (flag) {
+					flag = false;
+					sql.append("`");
+					if (!iter->second.m_insertQuery.empty())
+						sqlValuePart.append(iter->second.m_insertQuery);
+					else
+						sqlValuePart.append("?");
+				}
+				else {
+					sql.append(", `");
+					sqlValuePart.append(",");
+					if (!iter->second.m_insertQuery.empty())
+						sqlValuePart.append(iter->second.m_insertQuery);
+					else
+						sqlValuePart.append("?");
+				}
+				sql.append(iter->first);
 				sql.append("`");
-				sqlValuePart.append("?");
 			}
-			else {
-				sql.append(", `");
-				sqlValuePart.append(", ?");
-			}
-			sql.append(iter->first);
-			sql.append("`");
 		}
 		sql.append(") VALUES (");
 		sql.append(sqlValuePart);
@@ -160,7 +183,7 @@ namespace JsCPPDBC {
 	void SQLiteDriver::addParamToStmtForInsert(PreparedStatment *stmt, EntityBase *entity)
 	{
 		for (std::map<std::string, EntityColumn>::iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY)) {
+			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY) && iter->second.m_insertable && iter->second.m_insertQuery.empty()) {
 				stmt->addParam(iter->second);
 			}
 		}
@@ -169,7 +192,7 @@ namespace JsCPPDBC {
 	void SQLiteDriver::addParamToStmtForUpdate(PreparedStatment *stmt, EntityBase *entity)
 	{
 		for (std::map<std::string, EntityColumn>::iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (!iter->second.isId) {
+			if (!iter->second.isId && iter->second.m_updatable && iter->second.m_updateQuery.empty()) {
 				stmt->addParam(iter->second);
 			}
 		}
@@ -185,7 +208,9 @@ namespace JsCPPDBC {
 	void SQLiteDriver::addParamToStmtForSave(PreparedStatment *stmt, EntityBase *entity)
 	{
 		for (std::map<std::string, EntityColumn>::iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			stmt->addParam(iter->second);
+			if (iter->second.m_insertable && iter->second.m_insertQuery.empty()) {
+				stmt->addParam(iter->second);
+			}
 		}
 	}
 
