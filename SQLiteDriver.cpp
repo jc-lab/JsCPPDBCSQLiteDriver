@@ -72,25 +72,22 @@ namespace JsCPPDBC {
 		flag = true;
 		for (std::map<std::string, EntityColumn>::const_iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
 			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY) && iter->second.m_insertable) {
-				if (flag) {
+				if (flag) 
 					flag = false;
-					sql.append("`");
-					if (!iter->second.m_insertQuery.empty())
-						sqlValuePart.append(iter->second.m_insertQuery);
-					else
-						sqlValuePart.append("?");
-
-				}
 				else {
-					sql.append(", `");
+					sql.append(",");
 					sqlValuePart.append(",");
-					if (!iter->second.m_insertQuery.empty())
-						sqlValuePart.append(iter->second.m_insertQuery);
-					else
-						sqlValuePart.append("?");
 				}
+				sql.append("`");
 				sql.append(iter->first);
 				sql.append("`");
+				if (!iter->second.m_defaultInsertQuery.empty()) {
+					sqlValuePart.append("CASE WHEN ? IS NULL OR ?=='' then ");
+					sqlValuePart.append(iter->second.m_defaultInsertQuery);
+					sqlValuePart.append(" else ? END");
+				}
+				else
+					sqlValuePart.append("?");
 			}
 		}
 		sql.append(") VALUES (");
@@ -121,8 +118,12 @@ namespace JsCPPDBC {
 					sql.append("`");
 					sql.append(iter->first);
 					sql.append("`=");
-					if (!iter->second.m_updateQuery.empty())
-						sql.append(iter->second.m_updateQuery);
+
+					if (!iter->second.m_defaultUpdateQuery.empty()) {
+						sql.append("CASE WHEN ? IS NULL OR ?=='' then ");
+						sql.append(iter->second.m_defaultUpdateQuery);
+						sql.append(" else ? END");
+					}
 					else
 						sql.append("?");
 				}
@@ -156,19 +157,20 @@ namespace JsCPPDBC {
 				if (flag) {
 					flag = false;
 					sql.append("`");
-					if (!iter->second.m_insertQuery.empty())
-						sqlValuePart.append(iter->second.m_insertQuery);
-					else
-						sqlValuePart.append("?");
 				}
 				else {
 					sql.append(", `");
 					sqlValuePart.append(",");
-					if (!iter->second.m_insertQuery.empty())
-						sqlValuePart.append(iter->second.m_insertQuery);
-					else
-						sqlValuePart.append("?");
 				}
+
+				if (!iter->second.m_defaultInsertQuery.empty()) {
+					sqlValuePart.append("CASE WHEN ? IS NULL OR ?=='' then ");
+					sqlValuePart.append(iter->second.m_defaultInsertQuery);
+					sqlValuePart.append(" else ? END");
+				}
+				else
+					sqlValuePart.append("?");
+
 				sql.append(iter->first);
 				sql.append("`");
 			}
@@ -183,8 +185,12 @@ namespace JsCPPDBC {
 	void SQLiteDriver::addParamToStmtForInsert(PreparedStatment *stmt, EntityBase *entity)
 	{
 		for (std::map<std::string, EntityColumn>::iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY) && iter->second.m_insertable && iter->second.m_insertQuery.empty()) {
+			if (!(iter->second.isId && iter->second.generatedValue == EntityColumn::IDENTITY) && iter->second.m_insertable) {
 				stmt->addParam(iter->second);
+				if (!iter->second.m_defaultInsertQuery.empty())
+				{
+					stmt->addParam(iter->second); stmt->addParam(iter->second);
+				}
 			}
 		}
 	}
@@ -192,8 +198,12 @@ namespace JsCPPDBC {
 	void SQLiteDriver::addParamToStmtForUpdate(PreparedStatment *stmt, EntityBase *entity)
 	{
 		for (std::map<std::string, EntityColumn>::iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (!iter->second.isId && iter->second.m_updatable && iter->second.m_updateQuery.empty()) {
+			if (!iter->second.isId && iter->second.m_updatable) {
 				stmt->addParam(iter->second);
+				if (!iter->second.m_defaultUpdateQuery.empty())
+				{
+					stmt->addParam(iter->second); stmt->addParam(iter->second);
+				}
 			}
 		}
 
@@ -208,11 +218,13 @@ namespace JsCPPDBC {
 	void SQLiteDriver::addParamToStmtForSave(PreparedStatment *stmt, EntityBase *entity)
 	{
 		for (std::map<std::string, EntityColumn>::iterator iter = entity->_jsh_columns.begin(); iter != entity->_jsh_columns.end(); iter++) {
-			if (iter->second.m_insertable && iter->second.m_insertQuery.empty()) {
+			if (iter->second.m_insertable) {
 				stmt->addParam(iter->second);
+				if (!iter->second.m_defaultInsertQuery.empty())
+				{
+					stmt->addParam(iter->second); stmt->addParam(iter->second);
+				}
 			}
 		}
 	}
-
-
 }

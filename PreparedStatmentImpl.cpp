@@ -22,14 +22,14 @@ namespace JsCPPDBC {
 			sqlite3 *db = m_driver->getNativeConnection();
 			int nrst;
 			m_lastrc = nrst = sqlite3_prepare(db, sql, -1, &m_stmt, NULL);
-			if (nrst) {
+			if (nrst || !m_stmt) {
 				throw exception::SQLException(sqlite3_errmsg(db), nrst);
 			}
 		}
 
 		PreparedStatmentImpl::~PreparedStatmentImpl()
 		{
-			close();
+			reset();
 		}
 
 		int PreparedStatmentImpl::close(void)
@@ -39,6 +39,13 @@ namespace JsCPPDBC {
 				sqlite3_finalize(m_stmt);
 				m_stmt = NULL;
 			}
+			return 0;
+		}
+		
+		int PreparedStatmentImpl::reset()
+		{
+			int nrst;
+			nrst = sqlite3_reset(m_stmt);
 			return 0;
 		}
 

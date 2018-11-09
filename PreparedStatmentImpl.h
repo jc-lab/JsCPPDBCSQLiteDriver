@@ -31,7 +31,8 @@ namespace JsCPPDBC {
 			PreparedStatmentImpl(SQLiteDriver *driver, Type type, const char *sql) throw(exception::SQLException);
 			virtual ~PreparedStatmentImpl();
 
-			int close(void) override;
+			int close() override;
+			int reset(void) override;
 			int execute(void) throw(exception::SQLException) override;
 			int64_t insert_rowid(void) override;
 			bool fetchRow(EntityBase *entity) throw(exception::SQLException);
