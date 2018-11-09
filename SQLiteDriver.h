@@ -51,6 +51,8 @@ namespace JsCPPDBC {
 		void addParamToStmtForUpdate(PreparedStatment *stmt, EntityBase *entity) override;
 		void addParamToStmtForSave(PreparedStatment *stmt, EntityBase *entity) override;
 
+		int flush(int nUseRetry = 1, int retryTimes = 3, int retryTimeMs = 100);
+
 	private:
 		SQLiteDriver();
 	};

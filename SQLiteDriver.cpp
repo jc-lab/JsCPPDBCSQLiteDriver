@@ -9,6 +9,17 @@
 #include "SQLiteDriver.h"
 #include "PreparedStatmentImpl.h"
 
+#undef _HAS_SLEEP
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#include <unistd.h>
+#define _HAS_SLEEP 1
+#undef Sleep
+#define Sleep(x) usleep((x)*1000)
+#elif defined(_WIN32)
+#include <windows.h>
+#define _HAS_SLEEP 1
+#endif
+
 namespace JsCPPDBC {
 
 	SQLiteDriver::SQLiteDriver()
@@ -226,5 +237,29 @@ namespace JsCPPDBC {
 				}
 			}
 		}
+	}
+
+	int SQLiteDriver::flush(int nUseRetry, int retryTimes, int retryTimeMs)
+	{
+		if (m_conn)
+		{
+			int i;
+			int nrst;
+			i = 0;
+			do {
+				nrst = sqlite3_wal_checkpoint_v2(m_conn, NULL, SQLITE_CHECKPOINT_RESTART, NULL, NULL);
+				if (((nrst == SQLITE_BUSY) || (nrst == SQLITE_LOCKED)) && (nUseRetry == 1))
+				{
+#if defined(_HAS_SLEEP) && _HAS_SLEEP
+					::Sleep(retryTimeMs);
+#endif
+					i++;
+				}
+				else
+					break;
+			} while (i < retryTimes);
+			return nrst;
+		}
+		return -1;
 	}
 }
