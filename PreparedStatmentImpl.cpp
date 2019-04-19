@@ -45,6 +45,7 @@ namespace JsCPPDBC {
 		int PreparedStatmentImpl::reset()
 		{
 			int nrst;
+			PreparedStatment::reset();
 			nrst = sqlite3_reset(m_stmt);
 			return 0;
 		}
