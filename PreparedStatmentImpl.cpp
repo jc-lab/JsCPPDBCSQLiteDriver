@@ -112,7 +112,11 @@ namespace JsCPPDBC {
 				case EntityColumn::TYPE_BLOB_VECTOR:
 				{
 					std::vector<char> *value = (std::vector<char>*)iter->buffer;
-					sqlite3_bind_text(m_stmt, ++paramidx, &(*value)[0], value->size(), SQLITE_STATIC);
+					if (value->size() > 0) {
+						sqlite3_bind_text(m_stmt, ++paramidx, &(*value)[0], value->size(), SQLITE_STATIC);
+					} else {
+						sqlite3_bind_null(m_stmt, ++paramidx);
+					}
 					break;
 				}
 				case EntityColumn::TYPE_BLOB_BUF:
@@ -217,8 +221,10 @@ namespace JsCPPDBC {
 							int length = sqlite3_column_bytes(m_stmt, i);
 							std::vector<char> *buffer = (std::vector<char>*)iterCol->second.buffer;
 							buffer->clear();
-							buffer->assign(length, 0);
-							memcpy(&(*buffer)[0], value, length);
+							if (length > 0) {
+								buffer->assign(length, 0);
+								memcpy(&(*buffer)[0], value, length);
+							}
 							break;
 						}
 						case EntityColumn::TYPE_BLOB_BUF:
