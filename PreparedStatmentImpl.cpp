@@ -239,6 +239,7 @@ namespace JsCPPDBC {
 						}
 					}
 				}
+				entity->setPersistStatus(ATTACH);
 				return true;
 			}
 			else if(nrst != SQLITE_DONE) {
